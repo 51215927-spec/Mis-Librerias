@@ -379,6 +379,152 @@ namespace Utilidades
             );
         }
 
+        // Presentación configurable: pantalla completa con flechas o lista numérica en un formulario.
+        public static int PedirOpcionMenu(
+            string[] menu,
+            string mensaje,
+            ColoresMenu colores,
+            FormatoMenu formato)
+        {
+            ArgumentNullException.ThrowIfNull(menu);
+            if (menu.Length == 0)
+                throw new ArgumentException("El menu no puede estar vacio.", nameof(menu));
+            if (formato.SeleccionInicial < 0 || formato.SeleccionInicial >= menu.Length)
+                throw new ArgumentOutOfRangeException(nameof(formato), "La selección inicial no existe.");
+            if (formato.Ancho < 0)
+                throw new ArgumentOutOfRangeException(nameof(formato), "El ancho no puede ser negativo.");
+
+            ConsoleColor colorOriginal = MyConsole.ForegroundColor;
+            ConsoleColor fondoOriginal = MyConsole.BackgroundColor;
+            bool guardadoPrevio = MyConsole.GuardadoActivo;
+
+            try
+            {
+                // Las listas numéricas se agregan al formulario sin borrar los datos anteriores.
+                if (formato.SeleccionNumerica || !MyConsole.EsInteractiva)
+                {
+                    MyConsole.ForegroundColor = colores.TextoMensaje;
+                    MyConsole.BackgroundColor = colores.FondoMensaje;
+                    if (!string.IsNullOrEmpty(mensaje))
+                        MyConsole.WriteLine(mensaje);
+
+                    MyConsole.ForegroundColor = colores.NoSeleccion;
+                    MyConsole.BackgroundColor = colores.FondoNoSeleccion;
+                    for (int i = 0; i < menu.Length; i++)
+                        MyConsole.WriteLine($"{i + 1}. {menu[i]}");
+
+                    MyConsole.ForegroundColor = colores.TextoNormal;
+                    MyConsole.BackgroundColor = colores.FondoTextoNormal;
+                    while (true)
+                    {
+                        string entrada = PedirString($"Opción (1 a {menu.Length}): ");
+                        if (int.TryParse(entrada, out int numero) && numero >= 1 && numero <= menu.Length)
+                            return numero - 1;
+                        MyConsole.WriteLine("Ingresá un número entero válido.");
+                    }
+                }
+
+                // Este formato de flechas ocupa una pantalla nueva, sin acumular menús anteriores.
+                MyConsole.ReinicializarRegistros();
+                MyConsole.DesactivarGuardado();
+                int indice = formato.SeleccionInicial;
+                int desplazamiento = 0;
+                bool confirmado = false;
+                string marcador = formato.Marcador ?? "►";
+                int digitos = menu.Length.ToString().Length;
+
+                while (true)
+                {
+                    MyConsole.ForegroundColor = colores.TextoNormal;
+                    MyConsole.BackgroundColor = colores.FondoTextoNormal;
+                    MyConsole.Clear();
+
+                    MyConsole.ForegroundColor = colores.TextoMensaje;
+                    MyConsole.BackgroundColor = colores.FondoMensaje;
+                    if (!string.IsNullOrEmpty(mensaje))
+                        MyConsole.WriteLine(mensaje);
+                    if (!string.IsNullOrEmpty(formato.Ayuda))
+                    {
+                        MyConsole.WriteLine(formato.Ayuda);
+                        MyConsole.WriteLine("");
+                    }
+
+                    int anchoDisponible = Math.Max(1, MyConsole.AnchoSeguro - 1);
+                    int ancho = formato.Ancho == 0
+                        ? anchoDisponible
+                        : Math.Min(formato.Ancho, anchoDisponible);
+                    int filasPie = string.IsNullOrEmpty(formato.Pie)
+                        ? 0
+                        : formato.Pie.Replace("\r", "").Split('\n').Length + 1;
+                    int visibles = Math.Min(menu.Length,
+                        Math.Max(1, MyConsole.AltoSeguro - MyConsole.CursorTop - filasPie - 1));
+
+                    if (indice < desplazamiento)
+                        desplazamiento = indice;
+                    else if (indice >= desplazamiento + visibles)
+                        desplazamiento = indice - visibles + 1;
+                    desplazamiento = Math.Clamp(desplazamiento, 0, menu.Length - visibles);
+
+                    for (int i = desplazamiento; i < desplazamiento + visibles; i++)
+                    {
+                        bool activo = i == indice;
+                        MyConsole.ForegroundColor = activo
+                            ? (confirmado ? colores.Seleccion : colores.Cursor)
+                            : colores.NoSeleccion;
+                        MyConsole.BackgroundColor = activo
+                            ? (confirmado ? colores.FondoSeleccion : colores.FondoCursor)
+                            : colores.FondoNoSeleccion;
+
+                        string prefijo = " " + (activo ? marcador : new string(' ', marcador.Length)) + " ";
+                        string numero = formato.NumerarOpciones
+                            ? (i + 1).ToString().PadLeft(digitos) + ". "
+                            : "";
+                        string linea = prefijo + numero + (menu[i] ?? "");
+                        MyConsole.WriteLine(Recortar(linea, ancho).PadRight(ancho));
+                    }
+
+                    MyConsole.ForegroundColor = colores.TextoNormal;
+                    MyConsole.BackgroundColor = colores.FondoTextoNormal;
+                    if (!string.IsNullOrEmpty(formato.Pie))
+                    {
+                        MyConsole.WriteLine("");
+                        MyConsole.WriteLine(formato.Pie);
+                    }
+
+                    if (confirmado)
+                        return indice;
+
+                    switch (MyConsole.ReadKey(true).Key)
+                    {
+                        case ConsoleKey.UpArrow:
+                            if (indice > 0)
+                                indice--;
+                            else if (formato.NavegacionCircular)
+                                indice = menu.Length - 1;
+                            break;
+                        case ConsoleKey.DownArrow:
+                            if (indice < menu.Length - 1)
+                                indice++;
+                            else if (formato.NavegacionCircular)
+                                indice = 0;
+                            break;
+                        case ConsoleKey.Enter:
+                            confirmado = true;
+                            break;
+                    }
+                }
+            }
+            finally
+            {
+                MyConsole.ForegroundColor = colorOriginal;
+                MyConsole.BackgroundColor = fondoOriginal;
+                if (guardadoPrevio)
+                    MyConsole.ActivarGuardado();
+                else
+                    MyConsole.DesactivarGuardado();
+            }
+        }
+
         // Se conserva esta sobrecarga para las llamadas existentes.
         public static int PedirOpcionMenu
         (

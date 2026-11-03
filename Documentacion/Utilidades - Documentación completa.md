@@ -416,6 +416,32 @@ Funciones.PedirOpcionMenu(opciones, "Menú:",
 
 ### Menús largos
 
+### Formato y navegación configurables
+
+La firma `PedirOpcionMenu(string[] menu, string mensaje, ColoresMenu colores, FormatoMenu formato)` permite configurar la presentación sin agregar parámetros individuales. Las firmas anteriores mantienen su comportamiento.
+
+```csharp
+var formato = new FormatoMenu
+{
+    Ancho = 55,
+    SeleccionInicial = 2,
+    Pie = "Contexto de la operación"
+};
+int elegido = Funciones.PedirOpcionMenu(opciones, "Título", colores, formato);
+```
+
+`new FormatoMenu()` usa selección inicial 0, ancho 0 (todo el ancho disponible menos una columna), marcador `►`, numeración automática alineada, navegación circular, ayuda `Usá ↑ / ↓ para navegar y ENTER para seleccionar.`, pie vacío y selección por flechas. `NumerarOpciones = false` permite pasar etiquetas ya numeradas. `NavegacionCircular = false` detiene las flechas en los extremos. Las teclas Home, End, PageUp, PageDown, números y Escape no seleccionan opciones en este formato. El resultado siempre es un índice desde cero.
+
+El título y la ayuda utilizan TextoMensaje/FondoMensaje; el pie utiliza TextoNormal/FondoTextoNormal. La pantalla con flechas se limpia en cada cuadro y elimina registros anteriores del historial. El menú no se agrega al historial; al salir se restauran los colores y el estado de guardado. Para conservar la elección al regresar, pasar el índice devuelto como SeleccionInicial de la próxima llamada. El pie lo proporciona el llamador; la biblioteca no conoce los datos de la aplicación.
+
+Con `SeleccionNumerica = true`, se conserva la pantalla del formulario, se imprime el mensaje y la lista `1. ...`, y se solicita `Opción (1 a N):`. Texto o valores fuera del rango muestran `Ingresá un número entero válido.` y repiten la solicitud. También se usa esta entrada numérica cuando la entrada o salida están redirigidas. Se preserva el manejo de fin de entrada de MyConsole (EndOfStreamException).
+
+Opciones vacías o null se rechazan como antes. Ancho negativo o SeleccionInicial fuera de la lista producen ArgumentOutOfRangeException. Las opciones largas se recortan al ancho disponible y las listas de flechas que exceden la altura muestran una ventana que mantiene visible la opción activa. No se modifican los menús múltiples.
+
+Crear la configuración con `new FormatoMenu()` o inicializador de objeto; `default(FormatoMenu)` no ejecuta el constructor del struct y por eso no equivale a los valores anteriores.
+
+### Menús largos de las firmas anteriores
+
 Si el menú tiene más opciones de las que caben en la ventana, se muestran **solo algunas** con los avisos `... mas opciones arriba` y `... mas opciones abajo`, y la lista se desplaza con el cursor.
 
 ### Menús y validaciones
