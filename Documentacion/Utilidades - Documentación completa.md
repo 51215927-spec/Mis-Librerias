@@ -414,8 +414,6 @@ Funciones.PedirOpcionMenu(opciones, "Menú:",
     textoNormal: ConsoleColor.White);
 ```
 
-### Menús largos
-
 ### Formato y navegación configurables
 
 La firma `PedirOpcionMenu(string[] menu, string mensaje, ColoresMenu colores, FormatoMenu formato)` permite configurar la presentación sin agregar parámetros individuales. Las firmas anteriores mantienen su comportamiento.
