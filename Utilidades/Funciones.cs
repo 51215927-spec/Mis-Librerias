@@ -361,6 +361,25 @@ namespace Utilidades
         // --------------------------------------------------------------------
 
         // Menú de selección única: devuelve el índice de la opción elegida.
+        public static int PedirOpcionMenu(string[] menu, string mensaje, ColoresMenu colores)
+        {
+            return PedirOpcionMenu(
+                menu,
+                mensaje,
+                seleccion: colores.Seleccion,
+                cursor: colores.Cursor,
+                noSeleccion: colores.NoSeleccion,
+                textoNormal: colores.TextoNormal,
+                fondoSeleccion: colores.FondoSeleccion,
+                fondoCursor: colores.FondoCursor,
+                fondoNoSeleccion: colores.FondoNoSeleccion,
+                fondoTextoNormal: colores.FondoTextoNormal,
+                textoMensaje: colores.TextoMensaje,
+                fondoMensaje: colores.FondoMensaje
+            );
+        }
+
+        // Se conserva esta sobrecarga para las llamadas existentes.
         public static int PedirOpcionMenu
         (
             string[] menu,

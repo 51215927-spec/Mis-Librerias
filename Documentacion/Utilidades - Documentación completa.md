@@ -368,6 +368,44 @@ Devuelve los índices marcados **ordenados de menor a mayor**. Puede devolver un
 
 ### Colores personalizados
 
+`ColoresMenu` agrupa los diez colores del menú. Su constructor sin argumentos mantiene la paleta predeterminada existente. Se puede configurar con un inicializador de objeto y pasarlo como tercer argumento:
+
+```csharp
+var colores = new ColoresMenu
+{
+    Seleccion = ConsoleColor.Black,
+    Cursor = ConsoleColor.Black,
+    NoSeleccion = ConsoleColor.White,
+    TextoNormal = ConsoleColor.White,
+    FondoSeleccion = ConsoleColor.Gray,
+    FondoCursor = ConsoleColor.Gray,
+    TextoMensaje = ConsoleColor.White
+};
+
+int elegido = Funciones.PedirOpcionMenu(opciones, "Menú:", colores);
+```
+
+| Propiedad | Valor de `new ColoresMenu()` |
+| --- | --- |
+| `Seleccion` | `ConsoleColor.White` |
+| `Cursor` | `ConsoleColor.Green` |
+| `NoSeleccion` | `ConsoleColor.DarkGreen` |
+| `TextoNormal` | `ConsoleColor.DarkGreen` |
+| `FondoSeleccion` | `ConsoleColor.Black` |
+| `FondoCursor` | `ConsoleColor.Black` |
+| `FondoNoSeleccion` | `ConsoleColor.Black` |
+| `FondoTextoNormal` | `ConsoleColor.Black` |
+| `TextoMensaje` | `ConsoleColor.DarkGreen` |
+| `FondoMensaje` | `ConsoleColor.Black` |
+
+`Seleccion` se aplica al resultado confirmado; `Cursor`, a la opción sobre la que se navega; `NoSeleccion`, a las demás; `TextoNormal`, al texto auxiliar; y `TextoMensaje`, al título. Cada uno tiene su fondo correspondiente. Los mensajes de información actuales conservan su color propio cian, porque su función de impresión lo establece explícitamente.
+
+La firma es `PedirOpcionMenu(string[] menu, string mensaje, ColoresMenu colores)`. Esta sobrecarga transmite la configuración al método existente: conserva índices desde cero, validaciones, navegación y restauración de colores. La estructura no contiene textos, modo de entrada, ancho o selección inicial. El menú múltiple mantiene por ahora su firma anterior.
+
+Usar `new ColoresMenu()` o `new ColoresMenu { ... }` para obtener los valores de la tabla. Como es un struct, `default(ColoresMenu)` pone todas las propiedades en cero (`ConsoleColor.Black`); no ejecuta el constructor. Un inicializador solo cambia las propiedades indicadas.
+
+Las llamadas existentes con colores individuales siguen siendo válidas:
+
 ```csharp
 Funciones.PedirOpcionMenu(opciones, "Menú:",
     seleccion:   ConsoleColor.Yellow,
