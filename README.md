@@ -30,7 +30,7 @@ Las dos librerías son independientes: `DataBases` no usa `Utilidades` ni al rev
 | Elemento | Detalle |
 | :--- | :--- |
 | Framework de los proyectos | `net8.0` (ver `TargetFramework` en cada `.csproj`) |
-| SDK para compilar | .NET 8 o superior. El archivo `Mis Librerias.slnx` requiere además un SDK reciente (según mi conocimiento, .NET 9.0.200 o superior; no verificado) |
+| SDK para compilar | .NET 8 o superior. El archivo `Mis Librerias.slnx` requiere además un SDK reciente |
 | Mínimo por código en `Utilidades` | .NET 6 (no usa nada posterior; no verificado compilando) |
 | Mínimo por código en `DataBases` | .NET 8 (usa `ArgumentException.ThrowIfNullOrWhiteSpace`) |
 | Nullable | Pensado para proyectos con `<Nullable>enable</Nullable>` |

@@ -353,6 +353,9 @@ namespace Utilidades
             return Enum.Parse<TEnum>(string.Join(",", elegidos.Select(i => opciones[i])));
         }
 
+
+
+
         // --------------------------------------------------------------------
         //  Menús
         // --------------------------------------------------------------------
@@ -365,10 +368,30 @@ namespace Utilidades
             ConsoleColor seleccion = ConsoleColor.White,
             ConsoleColor cursor = ConsoleColor.Green,
             ConsoleColor noSeleccion = ConsoleColor.DarkGreen,
-            ConsoleColor textoNormal = ConsoleColor.DarkGreen
+            ConsoleColor textoNormal = ConsoleColor.DarkGreen,
+            ConsoleColor fondoSeleccion = ConsoleColor.Black,
+            ConsoleColor fondoCursor = ConsoleColor.Black,
+            ConsoleColor fondoNoSeleccion = ConsoleColor.Black,
+            ConsoleColor fondoTextoNormal = ConsoleColor.Black,
+            ConsoleColor textoMensaje = ConsoleColor.DarkGreen,
+            ConsoleColor fondoMensaje = ConsoleColor.Black
         )
         {
-            return EjecutarMenu(menu, mensaje, false, null, seleccion, cursor, noSeleccion, textoNormal);
+            return EjecutarMenu(
+                menu,
+                mensaje,
+                null,
+                seleccion,
+                cursor,
+                noSeleccion,
+                textoNormal,
+                fondoSeleccion,
+                fondoCursor,
+                fondoNoSeleccion,
+                fondoTextoNormal,
+                textoMensaje,
+                fondoMensaje
+            );
         }
 
         // Menú de selección múltiple: devuelve los índices marcados, de menor a mayor.
@@ -379,12 +402,32 @@ namespace Utilidades
             ConsoleColor seleccion = ConsoleColor.White,
             ConsoleColor cursor = ConsoleColor.Green,
             ConsoleColor noSeleccion = ConsoleColor.DarkGreen,
-            ConsoleColor textoNormal = ConsoleColor.DarkGreen
+            ConsoleColor textoNormal = ConsoleColor.DarkGreen,
+            ConsoleColor fondoSeleccion = ConsoleColor.Black,
+            ConsoleColor fondoCursor = ConsoleColor.Black,
+            ConsoleColor fondoNoSeleccion = ConsoleColor.Black,
+            ConsoleColor fondoTextoNormal = ConsoleColor.Black,
+            ConsoleColor textoMensaje = ConsoleColor.DarkGreen,
+            ConsoleColor fondoMensaje = ConsoleColor.Black
         )
         {
             List<int> marcados = new();
 
-            EjecutarMenu(menu, mensaje, true, marcados, seleccion, cursor, noSeleccion, textoNormal);
+            EjecutarMenu(
+                menu,
+                mensaje,
+                marcados,
+                seleccion,
+                cursor,
+                noSeleccion,
+                textoNormal,
+                fondoSeleccion,
+                fondoCursor,
+                fondoNoSeleccion,
+                fondoTextoNormal,
+                textoMensaje,
+                fondoMensaje
+            );
 
             marcados.Sort();
 
@@ -392,48 +435,63 @@ namespace Utilidades
         }
 
         // Núcleo común de los dos menús.
-        //   multiple = false → devuelve el índice elegido.
-        //   multiple = true  → llena "marcados" con los índices marcados (el valor devuelto se ignora).
+        // marcados == null: selección única.
+        // marcados != null: selección múltiple.
         private static int EjecutarMenu
         (
             string[] menu,
             string mensaje,
-            bool multiple,
             List<int>? marcados,
             ConsoleColor seleccion,
             ConsoleColor cursor,
             ConsoleColor noSeleccion,
-            ConsoleColor textoNormal
+            ConsoleColor textoNormal,
+            ConsoleColor fondoSeleccion,
+            ConsoleColor fondoCursor,
+            ConsoleColor fondoNoSeleccion,
+            ConsoleColor fondoTextoNormal,
+            ConsoleColor textoMensaje,
+            ConsoleColor fondoMensaje
         )
         {
             ArgumentNullException.ThrowIfNull(menu);
+
             if (menu.Length == 0)
-                throw new ArgumentException("El menu no puede estar vacio.", nameof(menu));
+                throw new ArgumentException(
+                    "El menu no puede estar vacio.",
+                    nameof(menu)
+                );
 
             mensaje ??= "";
 
-            // Sin consola interactiva no se pueden usar flechas ni limpiar la pantalla.
+            bool multiple = marcados != null;
+
+            // Sin consola interactiva no se pueden usar flechas
+            // ni limpiar la pantalla.
             if (!MyConsole.EsInteractiva)
-                return EjecutarMenuSimple(menu, mensaje, multiple, marcados);
+                return EjecutarMenuSimple(menu, mensaje, marcados);
 
             int index = 0;
-            int desplazamiento = 0;   // primera opción visible (para menús más altos que la ventana)
+            int desplazamiento = 0;
             bool ultimaIteracion = false;
             bool fin = false;
             bool exito = false;
 
             ConsoleColor colorOriginal = MyConsole.ForegroundColor;
+            ConsoleColor fondoOriginal = MyConsole.BackgroundColor;
             bool guardadoPrevio = MyConsole.GuardadoActivo;
 
-            // Mientras se dibujan los cuadros intermedios no se guarda nada en el historial.
+            // Mientras se dibujan los cuadros intermedios
+            // no se guarda nada en el historial.
             MyConsole.DesactivarGuardado();
 
-            // try/finally: si algo falla a mitad del menú, el color y el estado de
-            // guardado no quedan alterados.
             try
             {
                 do
                 {
+                    // IMPORTANTE: establecer los colores ANTES de limpiar.
+                    MyConsole.ForegroundColor = textoNormal;
+                    MyConsole.BackgroundColor = fondoTextoNormal;
                     MyConsole.Clear();
 
                     // Volver a dibujar lo que había antes del menú.
@@ -444,54 +502,125 @@ namespace Utilidades
                     {
                         fin = true;
 
-                        // El cuadro final del menú sí queda registrado, y el guardado
-                        // queda activado cuando el menú termina.
+                        // El cuadro final del menú sí queda registrado.
                         MyConsole.ActivarGuardado();
                     }
 
-                    MyConsole.ForegroundColor = textoNormal;
+                    // Mensaje principal.
+                    MyConsole.ForegroundColor = textoMensaje;
+                    MyConsole.BackgroundColor = fondoMensaje;
                     MyConsole.WriteLine(mensaje);
-                    ImprimirMesajeDeInformacion(multiple
-                        ? "Para desplazarse: flechitas. Para seleccionar: Espacio. Para salir: Enter"
-                        : "Para desplazarse: flechitas. Para seleccionar: Enter");
 
-                    // Si el menú es más alto que lo que queda de ventana, se muestra solo
-                    // una parte (con indicadores) y se desplaza junto con el cursor.
-                    int filasLibres = MyConsole.AltoSeguro - MyConsole.CursorTop - 1;
+                    // Instrucciones.
+                    MyConsole.ForegroundColor = textoNormal;
+                    MyConsole.BackgroundColor = fondoTextoNormal;
+
+                    ImprimirMesajeDeInformacion(
+                        multiple
+                            ? "Para desplazarse: flechitas. Para seleccionar: Espacio. Para salir: Enter"
+                            : "Para desplazarse: flechitas. Para seleccionar: Enter"
+                    );
+
+                    // Si el menú supera el espacio disponible,
+                    // se muestra una ventana desplazable.
+                    int filasLibres =
+                        MyConsole.AltoSeguro - MyConsole.CursorTop - 1;
+
+                    filasLibres = Math.Max(1, filasLibres);
+
                     bool conVentana = menu.Length > filasLibres;
-                    int visibles = conVentana ? Math.Max(1, filasLibres - 2) : menu.Length;
 
+                    int visibles = conVentana
+                        ? Math.Max(1, filasLibres - 2)
+                        : menu.Length;
+
+                    // Mantener el cursor dentro de la ventana visible.
                     if (index < desplazamiento)
                         desplazamiento = index;
                     else if (index >= desplazamiento + visibles)
                         desplazamiento = index - visibles + 1;
 
-                    desplazamiento = Math.Clamp(desplazamiento, 0, menu.Length - visibles);
+                    desplazamiento = Math.Clamp(
+                        desplazamiento,
+                        0,
+                        Math.Max(0, menu.Length - visibles)
+                    );
 
                     if (conVentana)
-                        ImprimirIndicador(desplazamiento > 0, "arriba", noSeleccion);
-
-                    // Cada opción se recorta a una sola línea: si ocupara dos, el menú
-                    // crecería y provocaría desplazamiento de la pantalla.
-                    int anchoTexto = Math.Max(1, MyConsole.AnchoSeguro - 5);
-
-                    for (int i = desplazamiento; i < desplazamiento + visibles; i++)
                     {
-                        if (multiple && marcados!.Contains(i))
-                            MyConsole.ForegroundColor = seleccion;
-                        else if (i == index)
-                            MyConsole.ForegroundColor = (!multiple && ultimaIteracion) ? seleccion : cursor;
-                        else
-                            MyConsole.ForegroundColor = noSeleccion;
+                        ImprimirIndicador(
+                            desplazamiento > 0,
+                            "arriba",
+                            noSeleccion,
+                            fondoNoSeleccion
+                        );
+                    }
 
-                        string texto = Recortar(menu[i] ?? "", anchoTexto);
-                        MyConsole.WriteLine((i == index ? " > " : "   ") + texto);
+                    // Dejar una columna libre al final para evitar
+                    // el ajuste automático de línea de la consola.
+                    int anchoLinea = Math.Max(
+                        1,
+                        MyConsole.AnchoSeguro - 1
+                    );
+
+                    int anchoTexto = Math.Max(1, anchoLinea - 3);
+
+                    for (
+                        int i = desplazamiento;
+                        i < desplazamiento + visibles;
+                        i++
+                    )
+                    {
+                        bool estaMarcado =
+                            multiple && marcados!.Contains(i);
+
+                        bool esCursor = i == index;
+
+                        bool seleccionFinal =
+                            !multiple && ultimaIteracion && esCursor;
+
+                        if (estaMarcado || seleccionFinal)
+                        {
+                            MyConsole.ForegroundColor = seleccion;
+                            MyConsole.BackgroundColor = fondoSeleccion;
+                        }
+                        else if (esCursor)
+                        {
+                            MyConsole.ForegroundColor = cursor;
+                            MyConsole.BackgroundColor = fondoCursor;
+                        }
+                        else
+                        {
+                            MyConsole.ForegroundColor = noSeleccion;
+                            MyConsole.BackgroundColor = fondoNoSeleccion;
+                        }
+
+                        string texto = Recortar(
+                            menu[i] ?? "",
+                            anchoTexto
+                        );
+
+                        string linea =
+                            (esCursor ? " > " : "   ") + texto;
+
+                        // Pintar también el espacio restante de la línea.
+                        linea = linea.PadRight(anchoLinea);
+
+                        MyConsole.WriteLine(linea);
                     }
 
                     if (conVentana)
-                        ImprimirIndicador(desplazamiento + visibles < menu.Length, "abajo", noSeleccion);
+                    {
+                        ImprimirIndicador(
+                            desplazamiento + visibles < menu.Length,
+                            "abajo",
+                            noSeleccion,
+                            fondoNoSeleccion
+                        );
+                    }
 
-                    // En el último cuadro no se espera tecla: solo se muestra el resultado.
+                    // En el último cuadro se muestra el resultado
+                    // sin esperar otra tecla.
                     if (!ultimaIteracion)
                     {
                         ConsoleKeyInfo tecla = MyConsole.ReadKey(true);
@@ -499,11 +628,13 @@ namespace Utilidades
                         switch (tecla.Key)
                         {
                             case ConsoleKey.UpArrow:
-                                if (index > 0) index--;
+                                if (index > 0)
+                                    index--;
                                 break;
 
                             case ConsoleKey.DownArrow:
-                                if (index < menu.Length - 1) index++;
+                                if (index < menu.Length - 1)
+                                    index++;
                                 break;
 
                             case ConsoleKey.Home:
@@ -519,11 +650,15 @@ namespace Utilidades
                                 break;
 
                             case ConsoleKey.PageDown:
-                                index = Math.Min(menu.Length - 1, index + visibles);
+                                index = Math.Min(
+                                    menu.Length - 1,
+                                    index + visibles
+                                );
                                 break;
 
                             case ConsoleKey.Spacebar when multiple:
-                                // Remove devuelve false si el índice no estaba marcado: entonces se marca.
+                                // Si ya estaba marcado, se desmarca.
+                                // Si no estaba marcado, se marca.
                                 if (!marcados!.Remove(index))
                                     marcados.Add(index);
                                 break;
@@ -533,50 +668,75 @@ namespace Utilidades
                                 break;
                         }
                     }
-                } while (!fin);
+                }
+                while (!fin);
 
                 exito = true;
             }
             finally
             {
+                // Restaurar ambos colores originales.
                 MyConsole.ForegroundColor = colorOriginal;
+                MyConsole.BackgroundColor = fondoOriginal;
 
-                // Si hubo una excepción, el guardado vuelve al estado que tenía antes del menú.
+                // Si hubo una excepción, restaurar el estado
+                // de guardado que tenía antes del menú.
                 if (!exito)
                 {
-                    if (guardadoPrevio) MyConsole.ActivarGuardado();
-                    else MyConsole.DesactivarGuardado();
+                    if (guardadoPrevio)
+                        MyConsole.ActivarGuardado();
+                    else
+                        MyConsole.DesactivarGuardado();
                 }
             }
 
             return index;
         }
 
-        // Versión sin teclas, para entrada o salida redirigidas: se muestra la lista
-        // numerada y se pide el número (o números separados por coma en el menú múltiple).
-        private static int EjecutarMenuSimple(string[] menu, string mensaje, bool multiple, List<int>? marcados)
+        // Versión sin teclas, para entrada o salida redirigidas.
+        private static int EjecutarMenuSimple
+        (
+            string[] menu,
+            string mensaje,
+            List<int>? marcados
+        )
         {
+            bool multiple = marcados != null;
+
             MyConsole.WriteLine(mensaje);
 
             for (int i = 0; i < menu.Length; i++)
-                MyConsole.WriteLine($"  {i + 1}) {menu[i]}");
+            {
+                MyConsole.WriteLine(
+                    $"  {i + 1}) {menu[i]}"
+                );
+            }
 
             if (!multiple)
                 return PedirInt("Opcion (numero): ", 1, menu.Length) - 1;
 
             while (true)
             {
-                string entrada = PedirString("Opciones (numeros separados por coma, vacio = ninguna): ");
+                string entrada = PedirString(
+                    "Opciones (numeros separados por coma, vacio = ninguna): "
+                );
 
-                string[] partes = entrada.Split(',',
-                    StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                string[] partes = entrada.Split(
+                    ',',
+                    StringSplitOptions.RemoveEmptyEntries |
+                    StringSplitOptions.TrimEntries
+                );
 
                 List<int> elegidos = new();
                 bool valido = true;
 
                 foreach (string parte in partes)
                 {
-                    if (int.TryParse(parte, out int numero) && numero >= 1 && numero <= menu.Length)
+                    if (
+                        int.TryParse(parte, out int numero) &&
+                        numero >= 1 &&
+                        numero <= menu.Length
+                    )
                     {
                         if (!elegidos.Contains(numero - 1))
                             elegidos.Add(numero - 1);
@@ -599,18 +759,38 @@ namespace Utilidades
             }
         }
 
-        // Línea de aviso "... mas opciones arriba/abajo" (o línea vacía si no hay más).
-        private static void ImprimirIndicador(bool hayMas, string direccion, ConsoleColor color)
+        // Línea de aviso "... mas opciones arriba/abajo".
+        private static void ImprimirIndicador
+        (
+            bool hayMas,
+            string direccion,
+            ConsoleColor color,
+            ConsoleColor fondo
+        )
         {
             MyConsole.ForegroundColor = color;
-            MyConsole.WriteLine(hayMas ? $"   ... mas opciones {direccion}" : "");
+            MyConsole.BackgroundColor = fondo;
+
+            string texto = hayMas
+                ? $"   ... mas opciones {direccion}"
+                : "";
+
+            int ancho = Math.Max(1, MyConsole.AnchoSeguro - 1);
+
+            if (texto.Length > ancho)
+                texto = Recortar(texto, ancho);
+
+            MyConsole.WriteLine(texto.PadRight(ancho));
         }
 
-        // Deja el texto en una sola línea y lo recorta con "..." si supera el ancho.
+        // Deja el texto en una sola línea y lo recorta con "...".
         private static string Recortar(string texto, int ancho)
         {
-            // Saltos de línea o tabulaciones dentro de una opción romperían el dibujo del menú.
-            texto = texto.Replace('\r', ' ').Replace('\n', ' ').Replace('\t', ' ');
+            // Saltos de línea o tabulaciones romperían el dibujo del menú.
+            texto = texto
+                .Replace('\r', ' ')
+                .Replace('\n', ' ')
+                .Replace('\t', ' ');
 
             if (texto.Length <= ancho)
                 return texto;
