@@ -109,13 +109,13 @@ namespace Utilidades
 
                 if (!int.TryParse(texto, NumberStyles.Integer, CultureInfo.CurrentCulture, out int valor))
                 {
-                    ImprimirMesajeDeError("numero invalido");
+                    MyConsole.WriteLine("Ingresá un número entero válido.");
                     continue;
                 }
 
                 if (valor < minimo || valor > maximo)
                 {
-                    ImprimirMesajeDeError($"numero fuera de rango (permitido: {minimo} a {maximo})");
+                    MyConsole.WriteLine("Ingresá un número entero válido.");
                     continue;
                 }
 
