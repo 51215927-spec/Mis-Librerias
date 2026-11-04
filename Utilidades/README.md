@@ -276,8 +276,8 @@ double cualquiera = Funciones.PedirDouble("Valor: ");   // sin límites
 
 | Aspecto | Comportamiento |
 | --- | --- |
-| **Texto inválido** | `ERROR: numero invalido` y vuelve a preguntar. |
-| **Fuera de rango** | `ERROR: numero fuera de rango (permitido: min a max)` y vuelve a preguntar. |
+| **Texto inválido** | `PedirInt`: `Ingresá un número entero válido.` sin etiqueta ni color automático; `PedirDouble`: `ERROR: numero invalido`. Ambos vuelven a preguntar. |
+| **Fuera de rango** | `PedirInt`: el mismo aviso de entero válido, para reproducir StreamORT; `PedirDouble`: `ERROR: numero fuera de rango (permitido: min a max)`. Ambos vuelven a preguntar. |
 | **Límites** | `min` y `max` incluidos. |
 | **Límites por defecto de `PedirDouble`** | Sin límites (`double.MinValue` a `double.MaxValue`). La versión original rechazaba valores fuera de ±2 147 483 647. |
 | **Límites inconsistentes** | Si `min > max`, lanza `ArgumentException` de inmediato (error del programador). |
