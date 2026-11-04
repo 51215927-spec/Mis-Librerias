@@ -1,10 +1,10 @@
-# Utilidades — Documentación completa
+# Utilidades
 
-Guía para usar, entender y mantener la librería `Utilidades` (archivos `Funciones.cs`, `DecoracionConsola.cs` y `MyConsole.cs`): el conjunto de clases que facilita **pedir datos por consola con validación**, **mostrar menús navegables con las flechas** y **dar formato a lo que se imprime** (mensajes de colores, barras de progreso, marcos y tablas).
+Guía para usar, entender y mantener la librería `Utilidades` (archivos `Funciones.cs`, `DecoracionConsola.cs`, `MyConsole.cs`, `ColoresMenu.cs` y `FormatoMenu.cs`): el conjunto de clases que facilita **pedir datos por consola con validación**, **mostrar menús navegables con las flechas** y **dar formato a lo que se imprime** (mensajes de colores, barras de progreso, marcos y tablas).
 
 Está escrita para que la pueda leer cualquier persona, incluso sin experiencia previa con consolas ni con C#. Cada sección es independiente: se puede saltar directamente a la que interese.
 
-> **Estado de verificación:** este código y esta documentación no fueron compilados ni ejecutados por quien los escribió. Antes de usarlos en algo importante, compile el proyecto y pruebe los casos descritos en este documento.
+> **Verificación (03/11/2026):** compilación en Windows con SDK 10.0.401 y destino net8.0; permanece la advertencia CA1416 de la consulta de visibilidad del cursor. Los menús se comprobaron sobre .NET 8.0.33: navegación, colores, selección numérica, entrada redirigida y fin de entrada. Los ejemplos completos indicados debajo se compilan y ejecutan en esta revisión. Esto no acredita todas las funciones, sistemas, tamaños de terminal o condiciones de concurrencia.
 
 ---
 
@@ -27,10 +27,12 @@ Está escrita para que la pueda leer cualquier persona, incluso sin experiencia 
 
 Un programa de consola necesita hacer siempre las mismas tareas: preguntar un número y repetir la pregunta si el usuario escribe una letra, mostrar un menú, imprimir un error en rojo. Escribir ese código en cada programa es repetitivo y propenso a errores.
 
-La librería `Utilidades` reúne esas tareas en tres clases, una por archivo:
+La librería reúne esas tareas en tres clases y dos estructuras de configuración:
 
-| Clase | Para qué sirve |
+| Clase o struct | Para qué sirve |
 | --- | --- |
+| `ColoresMenu` | Agrupa los colores de texto y fondo del menú. |
+| `FormatoMenu` | Agrupa presentación, selección inicial y modo de navegación. |
 | `Funciones` | **Pedir datos** al usuario (texto, números, fechas, contraseñas, enums) y **menús** con las flechas del teclado. |
 | `DecoracionConsola` | **Mostrar** cosas con formato: mensajes de colores, barras de progreso, marcos, listas y tablas. |
 | `MyConsole` | Un envoltorio de `Console` que además puede **recordar lo escrito** para volver a dibujarlo después de limpiar la pantalla. |
@@ -207,7 +209,7 @@ Un programa puede ejecutar tareas en paralelo (*hilos*). Si dos hilos modifican 
 
 | Requisito | Detalle |
 | --- | --- |
-| **.NET** | El proyecto `Utilidades.csproj` apunta a `net8.0`, por lo que la aplicación debe ser `net8.0` o superior. Por su código, la librería no usa nada posterior a .NET 6 (`DateOnly`, `TimeOnly`, `ArgumentNullException.ThrowIfNull`); para usarla en .NET 6 o 7 se cambia `<TargetFramework>` en el `.csproj`. Esto último no fue verificado compilando. |
+| **.NET** | El proyecto apunta a `net8.0`; la aplicación que lo referencia debe ser compatible. La solución `.slnx` necesita un SDK que admita ese formato; también se puede compilar el `.csproj` individual. |
 | **Nullable** | Pensado para proyectos con `<Nullable>enable</Nullable>`. |
 | **Consola** | Funciona mejor en una consola real. Sin ella, usa modos alternativos (sección 5.4). |
 | **Fuente** | Algunos símbolos (`═ ╔ ║ •`) requieren una consola con soporte Unicode. |
@@ -216,7 +218,7 @@ Un programa puede ejecutar tareas en paralelo (*hilos*). Si dos hilos modifican 
 
 La forma recomendada es agregar el proyecto como **referencia de proyecto** desde la aplicación de consola (pasos para Visual Studio y para la línea de comandos en el README, sección "Compilación e instalación en una aplicación de consola"). La alternativa es copiar los archivos, como se describe a continuación.
 
-1. Si se copian los archivos: copiar la carpeta con los archivos al proyecto (`Funciones.cs`, `DecoracionConsola.cs` y `MyConsole.cs`, todos con `namespace Utilidades`). Si el proyecto tenía un `Utilidades.cs` único con las tres clases, eliminarlo: de lo contrario el compilador marcará nombres duplicados. Con la referencia de proyecto, omitir este paso.
+1. Si se copian los archivos: copiar la carpeta con los archivos al proyecto (`Funciones.cs`, `DecoracionConsola.cs`, `MyConsole.cs`, `ColoresMenu.cs` y `FormatoMenu.cs`, todos con `namespace Utilidades`). Si el proyecto tenía un `Utilidades.cs` único con las tres clases, eliminarlo: de lo contrario el compilador marcará nombres duplicados. Con la referencia de proyecto, omitir este paso.
 2. Agregar el `using`:
 
 ```csharp
@@ -343,6 +345,15 @@ Permisos p = Funciones.PedirEnumFlags<Permisos>("Permisos: ");   // se marcan va
 
 ## 4.6 Menús
 
+Las firmas públicas de selección simple son:
+
+```csharp
+int PedirOpcionMenu(string[] menu, string mensaje, ColoresMenu colores, FormatoMenu formato);
+int PedirOpcionMenu(string[] menu, string mensaje, ColoresMenu colores);
+```
+
+También sigue disponible la firma anterior con diez parámetros opcionales de tipo ConsoleColor. La llamada de dos argumentos conserva ese comportamiento; pasar FormatoMenu es lo que habilita el formato nuevo. PedirEnum y PedirOpcionMultipleMenu continúan usando las firmas anteriores.
+
 ### Menú de selección única
 
 ```csharp
@@ -438,6 +449,69 @@ Opciones vacías o null se rechazan como antes. Ancho negativo o SeleccionInicia
 
 Crear la configuración con `new FormatoMenu()` o inicializador de objeto; `default(FormatoMenu)` no ejecuta el constructor del struct y por eso no equivale a los valores anteriores.
 
+### Propiedades de FormatoMenu
+
+| Propiedad | Valor con `new FormatoMenu()` |
+| --- | --- |
+| SeleccionInicial | 0; debe existir en la lista. |
+| Ancho | 0; usa el ancho disponible menos una columna. Un valor positivo lo limita. |
+| Marcador | `►` |
+| Ayuda | `Usá ↑ / ↓ para navegar y ENTER para seleccionar.` |
+| Pie | Texto vacío; el llamador puede incluir saltos de línea. |
+| NumerarOpciones | true; alinea los números según la cantidad de opciones. |
+| NavegacionCircular | true |
+| SeleccionNumerica | false; con true se agrega una lista numérica al formulario. |
+
+### Ejemplo completo con formato
+
+Programa independiente; las etiquetas no incluyen números porque los agrega el menú:
+
+```csharp
+using Utilidades;
+
+Console.OutputEncoding = System.Text.Encoding.UTF8;
+string[] opciones = { "Agregar", "Listar", "Salir" };
+var colores = new ColoresMenu
+{
+    Seleccion = ConsoleColor.Black,
+    Cursor = ConsoleColor.Black,
+    NoSeleccion = ConsoleColor.White,
+    TextoNormal = ConsoleColor.Gray,
+    FondoSeleccion = ConsoleColor.Gray,
+    FondoCursor = ConsoleColor.Gray,
+    TextoMensaje = ConsoleColor.White
+};
+var formato = new FormatoMenu
+{
+    Ancho = 55,
+    Pie = "Aplicación de ejemplo"
+};
+int elegido = Funciones.PedirOpcionMenu(opciones, "Menú", colores, formato);
+Console.WriteLine($"Índice elegido: {elegido}");
+```
+
+El programa fija UTF-8 para que flechas y marcador se representen correctamente. Para volver al menú conservando la selección, asignar `formato.SeleccionInicial = elegido` antes de llamar de nuevo.
+
+### Selección numérica dentro de un formulario
+
+Las etiquetas pueden ser distintas de los nombres de un enum, por ejemplo «Música». Esta llamada no limpia pantalla ni imprime la ayuda del menú:
+
+```csharp
+var coloresFormulario = new ColoresMenu
+{
+    NoSeleccion = ConsoleColor.White,
+    TextoNormal = ConsoleColor.White,
+    TextoMensaje = ConsoleColor.White,
+    FondoNoSeleccion = ConsoleColor.DarkBlue,
+    FondoTextoNormal = ConsoleColor.DarkBlue,
+    FondoMensaje = ConsoleColor.DarkBlue
+};
+var listaNumerica = new FormatoMenu { SeleccionNumerica = true };
+int categoria = Funciones.PedirOpcionMenu(
+    new[] { "Gaming", "Humor", "Música", "Entretenimiento" },
+    "Categoría:", coloresFormulario, listaNumerica);
+```
+
 ### Menús largos de las firmas anteriores
 
 Si el menú tiene más opciones de las que caben en la ventana, se muestran **solo algunas** con los avisos `... mas opciones arriba` y `... mas opciones abajo`, y la lista se desplaza con el cursor.
@@ -524,7 +598,7 @@ MyConsole.Clear();
 MyConsole.ReimprimirRegistros();    // vuelve a dibujar lo registrado
 ```
 
-Para qué sirve: los menús **limpian la pantalla** para redibujarse con cada tecla; el historial permite volver a mostrar lo que había **antes** del menú.
+Las firmas anteriores de menú usan el historial para redibujar lo que había antes. La sobrecarga con FormatoMenu en modo de flechas abre una pantalla completa y borra ese historial; su modo numérico conserva el formulario sin limpiar.
 
 | Método | Función |
 | --- | --- |
@@ -535,7 +609,7 @@ Para qué sirve: los menús **limpian la pantalla** para redibujarse con cada te
 | `EsInteractiva` | `true` si hay teclado y pantalla reales. |
 | `AnchoSeguro` / `AltoSeguro` | Tamaño de la ventana; nunca fallan (devuelven 80×24 si no se puede leer). |
 
-> **Importante:** el guardado está **activado desde el inicio**, por lo que todo lo que se imprima con `MyConsole` queda registrado, incluso antes del primer menú. Los menús lo desactivan mientras dibujan los cuadros intermedios y lo dejan **activado** al terminar. Se puede desactivar a mano con `DesactivarGuardado()`.
+> **Importante:** el guardado está **activado desde el inicio**, por lo que todo lo que se imprima con `MyConsole` queda registrado, incluso antes del primer menú. Las firmas anteriores lo desactivan durante los cuadros intermedios y lo dejan **activado** al terminar normalmente. La firma con FormatoMenu restaura el estado previo, incluso si estaba desactivado. Se puede desactivar a mano con `DesactivarGuardado()`.
 
 Con la salida redirigida, `ReimprimirRegistros` no hace nada, porque no hay pantalla donde reposicionar el cursor.
 
@@ -591,7 +665,7 @@ class Programa
 
 # 5. Controles y convenciones de la interfaz
 
-## 5.1 Teclas de los menús
+## 5.1 Teclas de las firmas anteriores y del menú múltiple
 
 | Tecla | Menú simple | Menú múltiple |
 | --- | --- | --- |
@@ -601,7 +675,7 @@ class Programa
 | `Enter` | **Elegir** la opción | **Terminar** la selección |
 | `Espacio` | *(sin efecto)* | **Marcar / desmarcar** |
 
-Los extremos no "dan la vuelta": estando en la primera opción, `↑` no hace nada.
+En esas firmas los extremos no dan la vuelta. La firma con FormatoMenu usa navegación circular por defecto, acepta solo flechas y Enter, y conserva la opción inicial que aporta el llamador. Home/End/PageUp/PageDown, números, Espacio y Escape no cambian su selección.
 
 ## 5.2 Colores por defecto de los menús
 
@@ -612,7 +686,7 @@ Los extremos no "dan la vuelta": estando en la primera opción, `↑` no hace na
 | Opción elegida / marcada | Blanco (`White`) |
 | Texto del mensaje | Verde oscuro (`DarkGreen`) |
 
-El cursor se señala además con `>` delante de la opción.
+Las firmas anteriores usan `>` como marcador. La firma con FormatoMenu usa `►` por defecto y permite cambiarlo mediante Marcador. Los colores predeterminados de ColoresMenu son comunes a ambas.
 
 ## 5.3 Prefijos y colores de los mensajes
 
@@ -625,7 +699,7 @@ El cursor se señala además con `>` delante de la opción.
 
 ## 5.4 Si no hay consola interactiva
 
-Cuando la entrada o la salida están redirigidas, los menús no pueden usar flechas. En su lugar:
+Con entrada o salida redirigidas, las firmas anteriores pasan a este modo numérico:
 
 ```text
 ¿Qué desea hacer?
@@ -635,7 +709,8 @@ Cuando la entrada o la salida están redirigidas, los menús no pueden usar flec
 Opcion (numero): _
 ```
 
-- **Menú simple:** se pide el número de la opción.
+- **Firma con FormatoMenu:** usa `1. Agregar` y `Opción (1 a N):`; repite `Ingresá un número entero válido.` ante entrada inválida. No imprime ayuda ni pie ni limpia pantalla.
+- **Menú simple anterior:** se pide el número de la opción.
 - **Menú múltiple:** se piden números separados por coma (`1,3`); vacío = ninguna.
 - `LeerClave` lee una línea normal (sin ocultar).
 - `WaitAndClean` no espera ninguna tecla.
@@ -649,7 +724,7 @@ Opcion (numero): _
 
 | Tipo | Ejemplo | Qué ocurre |
 | --- | --- | --- |
-| **El usuario escribe algo inválido** | `abc` donde va un número | **No** hay excepción: se muestra `ERROR: ...` y se vuelve a preguntar. |
+| **El usuario escribe algo inválido** | `abc` donde va un número | Se vuelve a preguntar; las funciones anteriores usan ERROR y la selección numérica con FormatoMenu usa su mensaje literal. |
 | **El programador usa mal una función** | Un menú vacío, `min > max` | Se **lanza una excepción** inmediatamente. |
 
 ## 6.2 Excepciones que pueden lanzarse
@@ -660,7 +735,7 @@ Opcion (numero): _
 | `ArgumentNullException` | Menú `null`; arreglo `null` en `MostrarLista`; matriz `null` en `MostrarTabla`. |
 | `InvalidOperationException` | Enum sin valores; `PedirEnumFlags` con un enum sin `[Flags]`. |
 | `EndOfStreamException` | La entrada se cerró (fin de archivo, Ctrl+Z / Ctrl+D) mientras se esperaba un dato. |
-| `ArgumentOutOfRangeException` | Uso directo de `MyConsole.SetCursorPosition` con coordenadas fuera del buffer. |
+| `ArgumentOutOfRangeException` | Ancho negativo o SeleccionInicial fuera de rango en FormatoMenu; uso directo de MyConsole.SetCursorPosition con coordenadas fuera del buffer. |
 
 ## 6.3 Mensajes que ve el usuario
 
@@ -673,7 +748,8 @@ Opcion (numero): _
 | `ERROR: fecha invalida` | `PedirDateOnly`, `PedirDateTime` | No se pudo interpretar como fecha. |
 | `ERROR: hora invalida` | `PedirTimeOnly`, `PedirDateTime` | No se pudo interpretar como hora. |
 | `ERROR: duracion invalida` | `PedirTimeSpan` | No se pudo interpretar como duración. |
-| `ERROR: opcion no valida` | Menú sin teclado | Números fuera de rango o mal escritos. |
+| `ERROR: opcion no valida` | Menú múltiple anterior sin teclado | Números fuera de rango o mal escritos. |
+| `Ingresá un número entero válido.` | Selección numérica con FormatoMenu | Texto, vacío o número fuera de 1–N; sin prefijo ERROR ni cambio de color. |
 
 ## 6.4 Patrón recomendado
 
@@ -727,12 +803,14 @@ catch (ArgumentException ex)
 ```text
 Utilidades
 │
+├── ColoresMenu / FormatoMenu: configuración por valor
 ├── Funciones
 │    ├── Entradas:  PedirString, PedirBool, PedirChar, PedirInt, PedirDouble,
 │    │              PedirDateOnly, PedirTimeOnly, PedirDateTime, PedirTimeSpan,
 │    │              LeerClave, WaitAndClean
 │    ├── Enums:     PedirEnum, PedirEnumFlags
-│    ├── Menús:     PedirOpcionMenu ──┐
+│    ├── Con FormatoMenu: PedirOpcionMenu (bucle propio o lista numérica)
+│    ├── Menús anteriores: PedirOpcionMenu ──┐
 │    │              PedirOpcionMultipleMenu ─┴─▶ EjecutarMenu (núcleo común)
 │    │                                              └─▶ EjecutarMenuSimple (sin teclado)
 │    └── Privados:  ValidarRango, DescribirRango, TryParseDouble,
@@ -872,9 +950,9 @@ Escribir un espacio en esa posición y volver a ella.
 
 Esto resuelve el caso de una contraseña larga cuyo texto ya pasó a la línea siguiente.
 
-## 7.7 El motor de menús (`EjecutarMenu`)
+## 7.7 El motor de las firmas anteriores (`EjecutarMenu`)
 
-Los dos menús comparten un mismo núcleo. Un parámetro `multiple` determina las diferencias.
+Las firmas anteriores de selección simple y múltiple comparten EjecutarMenu; la lista marcados determina si es múltiple. La firma de cuatro argumentos con FormatoMenu tiene su propio bucle: no reimprime ni conserva cuadros en el historial, restaura el estado previo y ofrece navegación circular. Su rama numérica no borra el formulario.
 
 ### Bucle principal
 
@@ -968,7 +1046,7 @@ Estas elecciones son razonables pero discutibles. Se documentan para poder cambi
 
 | Decisión | Alternativa | Motivo de la elección |
 | --- | --- | --- |
-| El historial **nace activado** y los menús lo dejan activado al terminar | Nacer desactivado | Todo lo escrito con `MyConsole` se puede redibujar desde el principio. Se puede desactivar con `DesactivarGuardado()`. |
+| El historial **nace activado**; solo las firmas anteriores lo dejan activado tras éxito | Nacer desactivado | Todo lo escrito con `MyConsole` se puede redibujar desde el principio. Se puede desactivar con `DesactivarGuardado()`. |
 | `EndOfStreamException` al cerrarse la entrada | Seguir devolviendo `""` | Evita bucles infinitos. |
 | Aceptar `3,5` y `3.5` | Solo la cultura actual | Más tolerante con el usuario. |
 | Rechazar el separador de miles | Aceptarlo | Evita ambigüedad entre `1.234` y `1,234`. |
@@ -1000,7 +1078,7 @@ Estas elecciones son razonables pero discutibles. Se documentan para poder cambi
 | **`CursorVisible`** | En algunos sistemas (macOS/Linux) leer esta propiedad no está soportado. |
 | **Unicode** | `═ ╔ ║ •` pueden verse mal en consolas sin soporte. |
 | **Entrada de texto sin edición avanzada** | `LeerClave` no maneja las teclas Suprimir ni las flechas laterales. |
-| **Menú sin "ciclo"** | En los extremos la flecha no salta al lado contrario. |
+| **Firmas anteriores sin ciclo** | En los extremos la flecha no salta al lado contrario. FormatoMenu sí permite ciclo y lo activa por defecto. |
 | **Orden de los enums** | Se obtiene por Reflection (`GetFields`); en la práctica sigue el orden de declaración, aunque .NET no lo garantiza formalmente. |
 
 ---
@@ -1009,7 +1087,7 @@ Estas elecciones son razonables pero discutibles. Se documentan para poder cambi
 
 ### 10.1 ¿Por qué mi texto desaparece al mostrar un menú?
 
-Porque el menú limpia la pantalla. Solo se vuelve a dibujar lo escrito **con `MyConsole`** y con el guardado activo. Si imprimió con `Console.WriteLine`, no está en el historial. Reemplace por `MyConsole.WriteLine`.
+En las firmas anteriores solo se vuelve a dibujar lo escrito con MyConsole y guardado en su historial. La firma con FormatoMenu en modo de flechas abre deliberadamente una pantalla nueva y descarta ese historial; enviar el contexto como título o Pie. Su modo numérico conserva el formulario.
 
 ### 10.2 ¿Por qué al cambiar de pantalla reaparecen cosas viejas?
 
@@ -1053,7 +1131,7 @@ Una opción más ancha que la ventana se recorta para que ocupe una línea. Acor
 
 ### 10.12 ¿El guardado está activado por defecto?
 
-Sí. `MyConsole` empieza con el guardado activado y los menús lo dejan activado al terminar. Se puede desactivar con `MyConsole.DesactivarGuardado()`; mientras esté desactivado, lo que se escriba no se vuelve a dibujar después de un menú.
+Sí. MyConsole empieza con el guardado activado. Las firmas anteriores lo dejan activado tras terminar normalmente; la firma con FormatoMenu restaura el estado que tenía al entrar. Se puede desactivar con MyConsole.DesactivarGuardado(); mientras esté desactivado, lo que se escriba no se registra.
 
 ### 10.13 ¿Por qué hay una vuelta extra al pulsar Enter en un menú?
 
@@ -1082,3 +1160,5 @@ Se renombró a `LeerClave` porque lee una contraseña, no un número. El nombre 
 ---
 
 *Fin del documento.*
+
+[Volver al repositorio](../README.md) · [DataBases](../DataBases/README.md)
